@@ -1,3 +1,4 @@
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
@@ -104,6 +105,21 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
+##@ Development Cluster
+
+kind-up kind-down: export KUBECONFIG = $(PROJECT_DIR)/dev/kind_kubeconfig.yaml
+
+.PHONY: kind-up
+kind-up: kind kustomize ## Create a local kind cluster for development.
+	$(KIND) create cluster --name image-clone-controller --config $(PROJECT_DIR)/config/kind.yaml --kubeconfig $(KUBECONFIG)
+	# run `export KUBECONFIG=$$PWD/dev/kind_kubeconfig.yaml` to target the created kind cluster.
+	$(KUSTOMIZE) build config/registry | kubectl apply -f -
+	kubectl -n registry wait deploy registry --for=condition=Available --timeout=2m
+
+.PHONY: kind-up
+kind-down: kind ## Delete the local kind cluster for development.
+	$(KIND) delete cluster --name image-clone-controller
+
 ##@ Deployment
 
 ifndef ignore-not-found
@@ -135,13 +151,21 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
+KIND ?= $(LOCALBIN)/kind
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
+KIND_VERSION ?= v0.14.0
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.9.0
+
+.PHONY: kind
+kind: $(KIND) ## Download kind locally if necessary.
+$(KIND): $(LOCALBIN)
+	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
+	chmod +x $(KIND)
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize

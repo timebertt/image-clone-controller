@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+spec:
+  type: NodePort
+  ports:
+  - port: 5001
+    targetPort: registry
+    nodePort: 30501
+    protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+spec:
+  replicas: 1
+  template:
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: registry
+        image: registry:2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: registry
+          containerPort: 5000
+        volumeMounts:
+        - name: cache
+          mountPath: /var/lib/registry
+      volumes:
+      - name: cache
+        hostPath:
+          path: /etc/local-registry
+          type: DirectoryOrCreate

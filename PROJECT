@@ -1,0 +1,6 @@
+domain: timebertt.dev
+layout:
+- go.kubebuilder.io/v3
+projectName: image-clone-controller
+repo: github.com/timebertt/image-clone-controller
+version: "3"

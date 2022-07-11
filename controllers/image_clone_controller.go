@@ -22,12 +22,12 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/crane"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -43,7 +43,6 @@ const ImageCloneControllerName = "image-clone"
 // ImageCloneController reconciles Deployment and DaemonSet objects and copies images to the configured backup registry.
 type ImageCloneController struct {
 	client.Client
-	Scheme *runtime.Scheme
 
 	BackupRegistry string
 }
@@ -104,6 +103,7 @@ func (c *ImageCloneController) ReconcileDeployment(ctx context.Context, req ctrl
 	if !apiequality.Semantic.DeepEqual(before, deployment) {
 		// use optimistic locking for patching the deployment, we should retry with exponential backoff if new containers or
 		// images where added in the meantime
+		log.Info("Patching images in Deployment")
 		return ctrl.Result{}, c.Patch(ctx, deployment, client.StrategicMergeFrom(before, client.MergeFromWithOptimisticLock{}))
 	}
 
@@ -132,6 +132,7 @@ func (c *ImageCloneController) ReconcileDaemonSet(ctx context.Context, req ctrl.
 	if !apiequality.Semantic.DeepEqual(before, daemonSet) {
 		// use optimistic locking for patching the daemonSet, we should retry with exponential backoff if new containers or
 		// images where added in the meantime
+		log.Info("Patching images in DaemonSet")
 		return ctrl.Result{}, c.Patch(ctx, daemonSet, client.StrategicMergeFrom(before, client.MergeFromWithOptimisticLock{}))
 	}
 
@@ -147,12 +148,22 @@ func (c *ImageCloneController) reconcilePodTemplate(log logr.Logger, template *c
 			continue
 		}
 
+		destImg := toDestinationImage(container.Image, c.BackupRegistry)
+
+		containerLog = containerLog.WithValues("destination", destImg)
 		containerLog.Info("Copying image to the backup registry")
 
-		// TODO: perform cloning logic and overwrite image
-		// template.Spec.Containers[i].Image = ...
-		_ = i
+		if err := crane.Copy(container.Image, destImg); err != nil {
+			return fmt.Errorf("error copying image: %w", err)
+		}
+
+		containerLog.Info("Finished copying image")
+		template.Spec.Containers[i].Image = destImg
 	}
 
 	return nil
+}
+
+func toDestinationImage(srcImage, destRegistry string) string {
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(destRegistry, "/"), strings.ReplaceAll(srcImage, ".", "_"))
 }

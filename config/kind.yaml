@@ -10,4 +10,4 @@ nodes:
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-    endpoint = ["http://image-clone-controller-control-plane:5001"]
+    endpoint = ["http://image-clone-controller-control-plane:30501"]

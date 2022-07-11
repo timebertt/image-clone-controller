@@ -83,7 +83,6 @@ func main() {
 
 	if err = (&controllers.ImageCloneController{
 		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
 		BackupRegistry: backupRegistry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", controllers.ImageCloneControllerName)

@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="image-clone-controller" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="image-clone-controller" />
+    <working_directory value="$PROJECT_DIR$" />
+    <envs>
+      <env name="KUBECONFIG" value="$PROJECT_DIR$/dev/kind_kubeconfig.yaml" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="github.com/timebertt/image-clone-controller" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

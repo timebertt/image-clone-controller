@@ -38,6 +38,40 @@ all: build
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+##@ Tools
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+
+.PHONY: clean-tools-bin
+clean-tools-bin: ## Empty the tools binary directory
+	rm -rf $(LOCALBIN)/*
+
+## Tool Binaries
+KIND ?= $(LOCALBIN)/kind
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+
+## Tool Versions
+KIND_VERSION ?= v0.14.0
+KUSTOMIZE_VERSION ?= v3.8.7
+CONTROLLER_TOOLS_VERSION ?= v0.9.0
+
+$(KIND): $(LOCALBIN) ## Download kind locally if necessary.
+	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
+	chmod +x $(KIND)
+
+KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+$(KUSTOMIZE): $(LOCALBIN) ## Download kustomize locally if necessary.
+	curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN)
+
+$(CONTROLLER_GEN): $(LOCALBIN) ## Download controller-gen locally if necessary.
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+$(ENVTEST): $(LOCALBIN) ## Download envtest-setup locally if necessary.
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
 ##@ Development
 
 .PHONY: manifests
@@ -142,35 +176,3 @@ deploy: manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster specified
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
-##@ Build Dependencies
-
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
-## Tool Binaries
-KIND ?= $(LOCALBIN)/kind
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-ENVTEST ?= $(LOCALBIN)/setup-envtest
-
-## Tool Versions
-KIND_VERSION ?= v0.14.0
-KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.9.0
-
-$(KIND): $(LOCALBIN) ## Download kind locally if necessary.
-	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
-	chmod +x $(KIND)
-
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
-$(KUSTOMIZE): $(LOCALBIN) ## Download kustomize locally if necessary.
-	curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN)
-
-$(CONTROLLER_GEN): $(LOCALBIN) ## Download controller-gen locally if necessary.
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
-
-$(ENVTEST): $(LOCALBIN) ## Download envtest-setup locally if necessary.
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest

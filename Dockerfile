@@ -4,6 +4,9 @@ FROM golang:1.18 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
+# `skaffold debug` sets SKAFFOLD_GO_GCFLAGS to disable compiler optimizations
+ARG SKAFFOLD_GO_GCFLAGS
+
 ENV CGO_ENABLED=0
 ENV GOOS=$TARGETOS
 ENV GOARCH=$TARGETARCH
@@ -21,7 +24,9 @@ COPY main.go main.go
 COPY controllers/ controllers/
 
 # Build
-RUN go build -a -o manager main.go
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" -a -o manager main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
@@ -29,5 +34,9 @@ FROM gcr.io/distroless/static:nonroot as manager
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
+
+# Define GOTRACEBACK to mark this container as using the Go language runtime
+# for `skaffold debug` (https://skaffold.dev/docs/workflows/debug/).
+ENV GOTRACEBACK=single
 
 ENTRYPOINT ["/manager"]

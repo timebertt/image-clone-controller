@@ -1,0 +1,20 @@
+---
+apiVersion: skaffold/v2beta29
+kind: Config
+metadata:
+  name: image-clone-controller
+build:
+  local:
+    useBuildkit: true
+  artifacts:
+  - image: ghcr.io/timebertt/image-clone-controller
+    docker:
+      dockerfile: Dockerfile
+      target: manager
+deploy:
+  kustomize:
+    flags:
+      apply:
+      - "--server-side"
+    paths:
+    - config/default

@@ -52,11 +52,13 @@ KIND ?= $(LOCALBIN)/kind
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+SKAFFOLD ?= $(LOCALBIN)/skaffold
 
 ## Tool Versions
 KIND_VERSION ?= v0.14.0
 KUSTOMIZE_VERSION ?= v4.5.5
 CONTROLLER_TOOLS_VERSION ?= v0.9.0
+SKAFFOLD_VERSION ?= v1.39.1
 
 $(KIND): $(LOCALBIN) ## Download kind locally if necessary.
 	curl -L -o $(KIND) https://kind.sigs.k8s.io/dl/$(KIND_VERSION)/kind-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
@@ -70,6 +72,10 @@ $(CONTROLLER_GEN): $(LOCALBIN) ## Download controller-gen locally if necessary.
 
 $(ENVTEST): $(LOCALBIN) ## Download envtest-setup locally if necessary.
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+$(SKAFFOLD): $(LOCALBIN) ## Download skaffold locally if necessary.
+	curl -Lo $(SKAFFOLD) https://storage.googleapis.com/skaffold/releases/$(SKAFFOLD_VERSION)/skaffold-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
+	chmod +x $(SKAFFOLD)
 
 ##@ Development
 
@@ -140,7 +146,7 @@ docker-push: ## Push docker image with the manager.
 
 ##@ Development Cluster
 
-kind-up kind-down: export KUBECONFIG = $(PROJECT_DIR)/dev/kind_kubeconfig.yaml
+kind-up kind-down up dev down: export KUBECONFIG = $(PROJECT_DIR)/dev/kind_kubeconfig.yaml
 
 .PHONY: kind-up
 kind-up: $(KIND) $(KUSTOMIZE) ## Create a local kind cluster for development.
@@ -152,6 +158,18 @@ kind-up: $(KIND) $(KUSTOMIZE) ## Create a local kind cluster for development.
 .PHONY: kind-up
 kind-down: $(KIND) ## Delete the local kind cluster for development.
 	$(KIND) delete cluster --name image-clone-controller
+
+.PHONY: up
+up: $(SKAFFOLD) ## Build all images and deploy everything to kind.
+	$(SKAFFOLD) run --tail
+
+.PHONY: dev
+dev: $(SKAFFOLD) ## Start continuous dev loop with skaffold.
+	$(SKAFFOLD) dev --cleanup=false --trigger=manual
+
+.PHONY: down
+down: $(SKAFFOLD) ## Remove everything from kind.
+	$(SKAFFOLD) delete
 
 ##@ Deployment
 

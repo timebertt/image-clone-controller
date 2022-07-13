@@ -45,6 +45,7 @@ type ImageCloneController struct {
 	client.Client
 
 	BackupRegistry string
+	PodNamespace   string
 }
 
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
@@ -52,6 +53,11 @@ type ImageCloneController struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (c *ImageCloneController) SetupWithManager(mgr ctrl.Manager) error {
+	if c.PodNamespace != "" {
+		// ignore the namespace that this controller is running in
+		ignoredNamespaces.Insert(c.PodNamespace)
+	}
+
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named(ImageCloneControllerName).
 		For(&appsv1.Deployment{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, namespacePredicate)).

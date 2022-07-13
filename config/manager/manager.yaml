@@ -32,6 +32,11 @@ spec:
         - --backup-registry=10.96.0.11:5001
         image: controller:latest
         name: manager
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

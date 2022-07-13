@@ -84,6 +84,7 @@ func main() {
 	if err = (&controllers.ImageCloneController{
 		Client:         mgr.GetClient(),
 		BackupRegistry: backupRegistry,
+		PodNamespace:   os.Getenv("POD_NAMESPACE"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", controllers.ImageCloneControllerName)
 		os.Exit(1)

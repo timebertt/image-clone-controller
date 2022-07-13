@@ -31,7 +31,7 @@ spec:
         - /manager
         args:
         - --leader-elect
-        - --backup-registry=image-clone-controller-control-plane:5001
+        - --backup-registry=10.96.0.11:5001
         image: controller:latest
         name: manager
         securityContext:

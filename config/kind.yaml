@@ -9,5 +9,12 @@ nodes:
     containerPort: 30501 # nodePort of Service registry/registry
 containerdConfigPatches:
 - |-
+  # rewrite tags pushed from outside of cluster to local registry
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-    endpoint = ["http://image-clone-controller-control-plane:30501"]
+    endpoint = ["http://10.96.0.11:5001"]
+  
+  # rewrite https to plain http for pulling images from the local registry
+  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."10.96.0.11:5001"]
+    endpoint = ["http://10.96.0.11:5001"]
+networking:
+  serviceSubnet: 10.96.0.0/16

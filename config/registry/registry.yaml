@@ -8,6 +8,7 @@ kind: Service
 metadata:
   name: registry
 spec:
+  clusterIP: 10.96.0.11
   type: NodePort
   ports:
   - port: 5001

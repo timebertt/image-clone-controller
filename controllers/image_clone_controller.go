@@ -34,6 +34,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -65,12 +66,18 @@ func (c *ImageCloneController) SetupWithManager(mgr ctrl.Manager) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named(ImageCloneControllerName).
 		For(&appsv1.Deployment{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, namespacePredicate)).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 5,
+		}).
 		Complete(reconcile.Func(c.ReconcileDeployment)); err != nil {
 		return err
 	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		Named(ImageCloneControllerName).
 		For(&appsv1.DaemonSet{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, namespacePredicate)).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 5,
+		}).
 		Complete(reconcile.Func(c.ReconcileDaemonSet)); err != nil {
 		return err
 	}

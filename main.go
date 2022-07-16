@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/klog/v2"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -67,6 +68,7 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	klog.SetLogger(ctrl.Log)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                        scheme,
@@ -74,7 +76,7 @@ func main() {
 		Port:                          9443,
 		HealthProbeBindAddress:        probeAddr,
 		LeaderElection:                enableLeaderElection,
-		LeaderElectionID:              "92a0a2d9.timebertt.dev",
+		LeaderElectionID:              "image-clone-controller",
 		LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {

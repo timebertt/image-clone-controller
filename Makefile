@@ -80,12 +80,8 @@ $(SKAFFOLD): $(LOCALBIN) ## Download skaffold locally if necessary.
 ##@ Development
 
 .PHONY: manifests
-manifests: $(CONTROLLER_GEN) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-.PHONY: generate
-generate: $(CONTROLLER_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+manifests: $(CONTROLLER_GEN) ## Generate RBAC manifests.
+	$(CONTROLLER_GEN) rbac:roleName=controller paths="./..."
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -100,7 +96,7 @@ modules: ## Runs go mod to ensure modules are up to date.
 	go mod tidy
 
 .PHONY: test
-test: manifests generate fmt vet $(ENVTEST) ## Run tests.
+test: manifests fmt vet $(ENVTEST) ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Verification
@@ -112,9 +108,9 @@ verify-fmt: fmt ## Verify go code is formatted.
 	fi
 
 .PHONY: verify-generate
-verify-generate: manifests generate ## Verify generated files are up to date.
+verify-generate: manifests ## Verify generated files are up to date.
 	@if !(git diff --quiet HEAD); then \
-		echo "generated files are out of date, please run 'make manifests generate'"; exit 1; \
+		echo "generated files are out of date, please run 'make manifests'"; exit 1; \
 	fi
 
 .PHONY: verify-modules
@@ -129,11 +125,11 @@ verify: verify-fmt verify-generate verify-modules test ## Verify everything (all
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build manager binary.
+build: fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
 .PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 .PHONY: docker-build
@@ -180,8 +176,8 @@ endif
 .PHONY: deploy
 deploy: manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/manager | kubectl apply -f -
 
 .PHONY: undeploy
 undeploy: $(KUSTOMIZE) ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/manager | kubectl delete --ignore-not-found=$(ignore-not-found) -f -

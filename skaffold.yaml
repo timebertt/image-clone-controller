@@ -17,4 +17,4 @@ deploy:
       apply:
       - "--server-side"
     paths:
-    - config/default
+    - config/manager

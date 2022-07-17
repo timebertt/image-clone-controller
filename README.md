@@ -17,7 +17,9 @@ Have a controller which watches the applications and mirrors the images to our o
 
 ## Demo
 
-TODO
+[![asciicast](https://asciinema.org/a/509182.svg)](https://asciinema.org/a/509182)
+
+[Play at asciinema.org](https://asciinema.org/a/509182)
 
 ## Usage
 
